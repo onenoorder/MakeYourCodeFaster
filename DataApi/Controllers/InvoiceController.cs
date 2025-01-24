@@ -18,11 +18,11 @@ namespace DataApi.Controllers
 
         private void GenerateInvoices()
         {
-            var today = new DateOnly(2024, 12, 1);
+            var today = new DateOnly(2024, 1, 1);
             var currentInvoiceDay = new DateOnly(today.Year, today.Month, 1);
             Random random = new Random();
 
-            while (currentInvoiceDay.Month == today.Month)
+            while (currentInvoiceDay.Year == today.Year)
             {
                 for (int index = 0; index <= random.Next(100, 1000); index++)
                 {
@@ -46,11 +46,13 @@ namespace DataApi.Controllers
         [Route("{date}")]
         public InvoicesViewModel Get(DateOnly date)
         {
+            Console.WriteLine(date.ToString());
             return CreateInvoiceViewModel(_invoices.Where(invoice => invoice.Date.Equals(date)));
         }
 
         private InvoicesViewModel CreateInvoiceViewModel(IEnumerable<Invoice> invoices)
         {
+            Console.WriteLine(invoices.Count());
             return new(invoices.First().Date, invoices.Last().Date, invoices.Count(), invoices);
         }
     }
