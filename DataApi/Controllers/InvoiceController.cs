@@ -7,52 +7,35 @@ namespace DataApi.Controllers
     public class InvoiceController : ControllerBase
     {
         private readonly ILogger<InvoiceController> _logger;
-        private IList<Invoice> _invoices;
+        private readonly DataSingleton _dataSingleton;
 
-        public InvoiceController(ILogger<InvoiceController> logger)
+        public InvoiceController(ILogger<InvoiceController> logger, DataSingleton dataSingleton)
         {
             _logger = logger;
-            _invoices = new List<Invoice>();
-            GenerateInvoices();
-        }
-
-        private void GenerateInvoices()
-        {
-            var today = new DateOnly(2024, 1, 1);
-            var currentInvoiceDay = new DateOnly(today.Year, today.Month, 1);
-            Random random = new Random();
-
-            while (currentInvoiceDay.Year == today.Year)
-            {
-                for (int index = 0; index <= random.Next(100, 1000); index++)
-                {
-                    _invoices.Add(new Invoice(
-                        currentInvoiceDay, 
-                        Enumerable.Range(1, random.Next(1, 10)).Select(test => new InvoiceLine(random.Next(10, 1000))).ToList()
-                    ));
-                }
-
-                currentInvoiceDay = currentInvoiceDay.AddDays(1);
-            }
+            _dataSingleton = dataSingleton;
         }
 
         [HttpGet]
         public InvoicesViewModel Get()
         {
-            return CreateInvoiceViewModel(_invoices);
+            return CreateInvoiceViewModel(_dataSingleton.GetInvoices());
         }
 
         [HttpGet]
         [Route("{date}")]
         public InvoicesViewModel Get(DateOnly date)
         {
-            Console.WriteLine(date.ToString());
-            return CreateInvoiceViewModel(_invoices.Where(invoice => invoice.Date.Equals(date)));
+            return CreateInvoiceViewModel(_dataSingleton.GetInvoices().Where(invoice => invoice.Date.Equals(date)));
+        }
+
+        [HttpGet]
+        [Route("total/amount")]
+        public double GetTotalAmount() {
+            return _dataSingleton.GetInvoices().Sum(invoice => invoice.InvoiceLines.Sum(invoiceLine => invoiceLine.Amount));
         }
 
         private InvoicesViewModel CreateInvoiceViewModel(IEnumerable<Invoice> invoices)
         {
-            Console.WriteLine(invoices.Count());
             return new(invoices.First().Date, invoices.Last().Date, invoices.Count(), invoices);
         }
     }

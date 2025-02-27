@@ -19,8 +19,9 @@ void run(std::function<int()> runFunction) {
     std::cout << "Total amount: " << result << std::endl;
 
     auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
-    std::cout << microseconds.count() / 1000 << "ms ";
     std::cout << microseconds.count() << "µs\n";
+    std::cout << microseconds.count() / 1000 << "ms\n";
+    std::cout << microseconds.count() / 1000000 << "s\n";
 }
 
 std::list<std::string> GetAllDatesOfLastYear() {
@@ -128,6 +129,37 @@ RemoteCallData RunRemoteCall(std::string url) {
     return remoteCallData;
 }
 
+int RunRemoteCallAndExpectOneIntValueBack(std::string url) {
+    int returnValue = 0;
+
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+
+        std::string readBuffer;
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+
+        CURLcode res = curl_easy_perform(curl);
+
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        }
+        else {
+            try {
+                returnValue = json::parse(readBuffer).get<int>();
+            }
+            catch (const json::exception& e) {
+                std::cerr << "Error parsing JSON: " << e.what() << std::endl;
+            }
+        }
+
+        curl_easy_cleanup(curl);
+    }
+
+    return returnValue;
+}
+
 int workingWithRemoteCalls() {
     std::string url = "https://localhost:7079/invoice/";
     int totalAmount = 0;
@@ -147,7 +179,7 @@ int workingWithRemoteCalls() {
     return totalAmount;
 }
 
-int workingWithOptimizeRemoteCalls() {
+int workingWithOneRemoteCall() {
     std::string url = "https://localhost:7079/invoice";
     int totalAmount = 0;
 
@@ -162,11 +194,22 @@ int workingWithOptimizeRemoteCalls() {
     return totalAmount;
 }
 
+int workingWithOptimizeRemoteCalls() {
+    std::string url = "https://localhost:7079/invoice/total/amount";
+
+    int totalAmount = RunRemoteCallAndExpectOneIntValueBack(url);
+
+    return totalAmount;
+}
+
 int main() {
     std::cout << "Optimize remote calls!\n";
 
     std::cout << "\n\Working with remote calls:\n";
     run(workingWithRemoteCalls);
+
+    std::cout << "\n\Working with one remote call:\n";
+    run(workingWithOneRemoteCall);
 
     std::cout << "\n\Working with optimize remote calls:\n";
     run(workingWithOptimizeRemoteCalls);
